@@ -1,7 +1,4 @@
-import os
-
 import requests
-from dotenv import load_dotenv
 
 
 def get_cart_items(api_token, cart_name):
@@ -121,7 +118,7 @@ def create_cart(token, customers_token, cart_name):
         },
     }
     response = requests.post('https://api.moltin.com/v2/carts', headers=headers, json=body_parameters)
-    print(response.json())
+
     response.raise_for_status()
 
 
@@ -182,7 +179,7 @@ def create_customers(token, firstname, lastname, email):
     customers_email = response.json()['data']['email']
     customers_id = response.json()['data']['id']
 
-    return customers_email,customers_id
+    return customers_email, customers_id
 
 
 def get_product_info(token, product_id):
@@ -411,6 +408,4 @@ def get_customers(token):
     }
 
     response = requests.get('https://api.moltin.com/v2/customers', headers=headers)
-    print(response.json())
-
-
+    response.raise_for_status()

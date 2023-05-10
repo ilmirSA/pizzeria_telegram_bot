@@ -10,9 +10,9 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, CallbackQ
     PreCheckoutQueryHandler
 
 from geo import fetch_coordinates, calculate_distance, get_nearest_pizzeria, fetch_address
-from get_text import get_text, ERROR_TEXT, LOCATION_TEXT, get_text_for_backet, get_text_for_show_products, \
+from get_text import get_shipping_cost, ERROR_TEXT, LOCATION_TEXT, get_text_for_backet, get_text_for_show_products, \
     TEXT_FOR_PICKUP, TEXT_COURIER_LATE, TEXT_FOR_CHOICE_PAYMENTS, get_text_dilivery
-from keyboard_generator import get_keyboard, get_keyboard_delete_products, get_show_keyboard, \
+from keyboard_generator import get_products_keyboard, get_keyboard_delete_products, get_show_keyboard, \
     get_choice_delivery_keyboard, get_keyboard_payment, get_choice_payment_keybord, get_check_order, \
     get_choice_answer_keyboard, get_menu_keyboard
 from moltin import get_product_info, get_photo_link, get_cart_items, remove_cart_item, add_product_to_cart, \
@@ -28,10 +28,9 @@ class Handlers(Enum):
     HANDLE_GEO = auto()
     HANDLE_DELIVERY = auto()
     HANDLE_PAYMENTS = auto()
-    # HANDLE_COURIER = auto()
 
 
-def page(update, context):
+def get_menu_page(update, context):
     context.bot_data['moltin_token'] = update_token(context.bot_data)
     moltin_token = context.bot_data['moltin_token']
     update_token(context.bot_data)
@@ -40,7 +39,7 @@ def page(update, context):
 
     button_name = "Назад" if query.data == 'Вперед' else "Вперед"
     products = get_all_products(moltin_token)
-    keyboard = get_keyboard(products, button_name)
+    keyboard = get_products_keyboard(products, button_name)
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -216,7 +215,7 @@ def get_coordinates(update, context):
 
         keyboard = get_choice_delivery_keyboard(nearest_pizzeria)
         reply_markup = InlineKeyboardMarkup(keyboard)
-        text = get_text(nearest_pizzeria)
+        text = get_shipping_cost(nearest_pizzeria)
         context.bot.send_message(
             chat_id=update.message.chat_id,
             text=text,
@@ -234,7 +233,7 @@ def get_coordinates(update, context):
         context.user_data['delivery_man_chat_id'] = nearest_pizzeria['delivery_man_chat_id']
         keyboard = get_choice_delivery_keyboard(nearest_pizzeria)
         reply_markup = InlineKeyboardMarkup(keyboard)
-        text = get_text(nearest_pizzeria)
+        text = get_shipping_cost(nearest_pizzeria)
         context.bot.send_message(
             chat_id=update.message.chat_id,
             text=text,
@@ -330,7 +329,7 @@ def send_invoice(update, context):
     return Handlers.HANDLE_PAYMENTS
 
 
-def cash_payment(update, context):
+def paid_cash(update, context):
     query = update.callback_query
     query.answer()
     yandex_token = context.bot_data['yandex_token']
@@ -384,7 +383,6 @@ def cash_payment(update, context):
         reply_markup=r_p
     )
 
-    # return Handlers.HANDLE_COURIER
     return Handlers.HANDLE_DESCRIPTION
 
 
@@ -441,7 +439,6 @@ def successful_payment_callback(update, context):
         reply_markup=r_p
     )
     return Handlers.HANDLE_DESCRIPTION
-    # return Handlers.HANDLE_COURIER
 
 
 def delivered_order(update, context):
@@ -513,7 +510,7 @@ def start(update, context):
     moltin_token = context.bot_data['moltin_token']
 
     products = get_all_products(moltin_token)
-    keyboard = get_keyboard(products, 'Вперед')
+    keyboard = get_products_keyboard(products, 'Вперед')
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     context.bot.send_message(
@@ -545,19 +542,19 @@ def main():
                                        states={
 
                                            Handlers.HANDLE_DESCRIPTION: [
-                                               CallbackQueryHandler(page, pattern='^' + 'Вперед' + '$'),
-                                               CallbackQueryHandler(page, pattern='^' + 'Назад' + '$'),
+                                               CallbackQueryHandler(get_menu_page, pattern='^' + 'Вперед' + '$'),
+                                               CallbackQueryHandler(get_menu_page, pattern='^' + 'Назад' + '$'),
                                                CallbackQueryHandler(show_bucket, pattern='^' + 'Корзина' + '$'),
                                                CallbackQueryHandler(show_products)
 
                                            ],
                                            Handlers.HANDLE_CART: [
-                                               CallbackQueryHandler(page, pattern='^' + 'Назад' + '$'),
+                                               CallbackQueryHandler(get_menu_page, pattern='^' + 'Назад' + '$'),
                                                CallbackQueryHandler(show_bucket, pattern='^' + 'Корзина' + '$'),
                                                CallbackQueryHandler(add_to_basket),
                                            ],
                                            Handlers.HANDLE_BACKET: [
-                                               CallbackQueryHandler(page, pattern='^' + 'Назад' + '$'),
+                                               CallbackQueryHandler(get_menu_page, pattern='^' + 'Назад' + '$'),
                                                CallbackQueryHandler(ask_address, pattern='^' + 'Оплатить' + '$'),
                                                CallbackQueryHandler(remove_item_in_cart),
 
@@ -575,29 +572,23 @@ def main():
                                                CallbackQueryHandler(payment_choice, pattern='^' + 'Оплата'),
                                                CallbackQueryHandler(send_invoice, pattern='^' + 'Картой'),
 
-                                               CallbackQueryHandler(cash_payment, pattern='^' + 'Наличными'),
+                                               CallbackQueryHandler(paid_cash, pattern='^' + 'Наличными'),
                                                PreCheckoutQueryHandler(precheckout_callback),
                                                MessageHandler(Filters.successful_payment,
                                                               successful_payment_callback),
 
                                            ],
-                                           # Handlers.HANDLE_COURIER: [
-                                           #     #CallbackQueryHandler(delivered_order, pattern='^' + 'Доставил'),
-                                           #     #CallbackQueryHandler(delete_order),
-                                           #
-                                           #
-                                           # ],
 
                                        },
                                        fallbacks=[CommandHandler('cancel', cancel)]
                                        )
 
-    a = CallbackQueryHandler(delivered_order, pattern='^' + 'Доставил')
-    bfas = CallbackQueryHandler(delete_order)
+    delivered_handler = CallbackQueryHandler(delivered_order, pattern='^' + 'Доставил')
+    delete_order_handler = CallbackQueryHandler(delete_order)
 
     updater.dispatcher.add_handler(conv_handler)
-    updater.dispatcher.add_handler(a)
-    updater.dispatcher.add_handler(bfas)
+    updater.dispatcher.add_handler(delivered_handler)
+    updater.dispatcher.add_handler(delete_order_handler)
     updater.dispatcher.bot_data['moltin_token'] = get_token_client_credential_token(client_id, client_secret)
     updater.dispatcher.bot_data['token_creation_time'] = datetime.datetime.now()
     updater.dispatcher.bot_data['client_id'] = client_id

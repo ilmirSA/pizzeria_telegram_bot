@@ -1,7 +1,7 @@
 import textwrap
 
 
-def get_text(nearest_pizza):
+def get_shipping_cost(nearest_pizza):
     distance = int(nearest_pizza['pizza_distance'])
     address = nearest_pizza['Address']
     text = ""

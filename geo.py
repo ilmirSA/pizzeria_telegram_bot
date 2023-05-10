@@ -11,7 +11,7 @@ def fetch_coordinates(apikey, address):
     })
     response.raise_for_status()
     found_places = response.json()['response']['GeoObjectCollection']['featureMember']
-    #found_address=response.json()['response']['GeoObjectCollection']['featureMember']
+
     if not found_places:
         return None
 

@@ -1,17 +1,6 @@
 from telegram import InlineKeyboardButton
 
 
-def build_menu(buttons, n_cols,
-               header_buttons=None,
-               footer_buttons=None):
-    menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
-    if header_buttons:
-        menu.insert(0, [header_buttons])
-    if footer_buttons:
-        menu.append([footer_buttons])
-    return menu
-
-
 def get_show_keyboard(product_id):
     keyboard = [
         [InlineKeyboardButton("Положить в корзину", callback_data=product_id), ],
@@ -47,12 +36,14 @@ def get_check_order(location_id):
     ]
     return keyboard
 
+
 def get_menu_keyboard():
     keyboard = [
         [InlineKeyboardButton("Меню", callback_data="Вперед")],
 
     ]
     return keyboard
+
 
 def get_choice_answer_keyboard(location_message_id):
     keyboard = [
@@ -61,6 +52,7 @@ def get_choice_answer_keyboard(location_message_id):
 
     ]
     return keyboard
+
 
 def get_keyboard_delete_products(products):
     inline_buttons = [InlineKeyboardButton(f"Удалить {button.get('name')}", callback_data=button.get('product_id')) for
@@ -71,7 +63,8 @@ def get_keyboard_delete_products(products):
     back_button = InlineKeyboardButton("Назад", callback_data='Назад')
     inline_buttons.append(pay_button)
     inline_buttons.append(back_button)
-    return build_menu(inline_buttons, 1)
+    cart_menu = [inline_buttons[i:i + 1] for i in range(0, len(inline_buttons), 1)]
+    return cart_menu
 
 
 def create_inline_buttons(start, end, button_name, products):
@@ -89,13 +82,15 @@ def get_keyboard_payment():
     return inline_button
 
 
-def get_keyboard(products, button_name):
+def get_products_keyboard(products, button_name):
     left = 0
     middle = round(len(products) / 2)
     right = len(products)
     if button_name == 'Назад':
         inline_buttons = create_inline_buttons(middle, right, button_name, products)
-        return build_menu(inline_buttons, 1)
+        products_menu = [inline_buttons[i:i + 1] for i in range(0, len(inline_buttons), 1)]
+        return products_menu
     elif button_name == 'Вперед':
         inline_buttons = create_inline_buttons(left, middle, button_name, products)
-        return build_menu(inline_buttons, 1)
+        products_menu = [inline_buttons[i:i + 1] for i in range(0, len(inline_buttons), 1)]
+        return products_menu
